@@ -7,7 +7,7 @@ Nick Costanzo
 
 <figure>
 <img
-src="C:/Users/nicks/Desktop/R%20Projects/Bellabeat%20Case%20Study/images/bellabeat_logo.png"
+src="https://github.com/nickcostanzo-work/bellabeat_case_study/blob/main/images/bellabeat_logo.png"
 alt="Bellabeat Logo" />
 <figcaption aria-hidden="true">Bellabeat Logo</figcaption>
 </figure>
@@ -25,7 +25,7 @@ alt="Bellabeat Logo" />
 #### Source Datasets
 
 [Kaggle Dataset -
-FitBit](%22https://www.kaggle.com/datasets/arashnic/fitbit%22)
+FitBit](https://www.kaggle.com/datasets/arashnic/fitbit)
 
 Data set suggested by Srsen - contains two separate directories that
 have data describing FitBit user activity for March through April, and
@@ -45,7 +45,7 @@ Metrics include:
 - Weight Logs
 
 [Kaggle Dataset - Human Stress Detection in and Through
-Sleep](%22https://www.kaggle.com/datasets/laavanya/human-stress-detection-in-and-through-sleep%22)
+Sleep](https://www.kaggle.com/datasets/laavanya/human-stress-detection-in-and-through-sleep)
 
 A case study for a ‘Smart Yoga Pillow’ product that focused on
 identifying a relationship between stress and sleep. It contains a
@@ -80,7 +80,7 @@ International Symposium on Smart Electronic Systems (iSES), 2018,
 pp. 161–166.
 
 [Kaggle Dataset - Apple Health Sleep Stages and Heart
-Rate](%22https://www.kaggle.com/datasets/aeryss/apple-health-sleep-stages-and-heart-rate%22)
+Rate](https://www.kaggle.com/datasets/aeryss/apple-health-sleep-stages-and-heart-rate)
 
 Another dataset containing sleep tracking metrics submitted from Apple
 Watch owners. The files appear to be split by user and by categories of
@@ -96,7 +96,7 @@ Metrics Include:
 - Steps
 
 [Kaggle Dataset - Health App
-Data](%22https://www.kaggle.com/datasets/dannyperez014/health-app-data-2017-2024%22)
+Data](https://www.kaggle.com/datasets/dannyperez014/health-app-data-2017-2024)
 
 Apple’s health app data public dataset. This dataset has a number of
 aspects associated with health metrics tracked through apples health
@@ -354,8 +354,8 @@ based on habits and correlations of other smart device user metrics.
   appealing to demographics who are actively treating sleep habits or
   are stressed out and need better help managing their stress.
 
-- We also identified the sweet spot of 3.5 - 5 hours of activity and 6-7
-  hours of sleep a night. Since this is an ideal range of both
+- We also identified the sweet spot of 3.5 - 5 hours of activity a day
+  and 6-7 hours of sleep a night. Since this is an ideal range of both
   categories, we could come up with a marketing campaign called ‘The
   4-7’, or something of that nature, to really highlight this balance.
   And then show how bellabeat products can help users stay on top of
