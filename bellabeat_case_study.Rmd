@@ -1,0 +1,635 @@
+---
+title: "Health Device Utilization"
+author: "Nick Costanzo"
+date: "2024-11-13"
+output:
+html_document: default
+pdf_document: default
+---
+
+# Bellabeat Case-Study:
+
+## Smart Device Utilization Trends Analysis
+
+### Business Task (The Ask)
+
+#### Provide analysis of Bellabeat competitor products (like Fitbit, Applewatch, etc.) health data in order to enable the marketing team with more targeted campaign strategies.
+
+
+### Processing the Data
+
+#### Source Datasets
+
+[Kaggle Dataset - FitBit]("https://www.kaggle.com/datasets/arashnic/fitbit")
+
+Data set suggested by Srsen - contains two separate directories that have data describing FitBit user activity for March through April, and April through May.  There is some consistency to the metrics measured.  We will import this directly from the website into our RStudio workbook 'dataset' directory and process the data for analysis from there.
+
+Metrics include:
+
+* Daily Activity
+* Heart Rate
+* Hourly Calories
+* Hourly Intensities
+* Hourly Steps
+* Calories burned per minute
+* Sleep Minutes
+* Weight Logs
+
+[Kaggle Dataset - Human Stress Detection in and Through Sleep]("https://www.kaggle.com/datasets/laavanya/human-stress-detection-in-and-through-sleep")
+
+A case study for a 'Smart Yoga Pillow' product that focused on identifying a relationship between stress and sleep.  It contains a variety of sleep metrics that we could consider for the stakeholders investigation into trends of smart device usage.  Since Bellabeat's products also have the functionality to track sleep metrics, this could provide information that could be used for those.
+
+Metrics Include:
+
+* respiration rate
+* body temperature
+* limb movement rate
+* bloood oxygen levels
+* eye movement
+* number of hours of sleep
+* heart rate
+* stress levels
+
+Citations:
+
+L. Rachakonda, A. K. Bapatla, S. P. Mohanty, and E. Kougianos, “SaYoPillow: Blockchain-Integrated Privacy-Assured IoMT Framework for Stress Management Considering Sleeping Habits”, IEEE Transactions on Consumer Electronics (TCE), Vol. 67, No. 1, Feb 2021, pp. 20-29.
+
+L. Rachakonda, S. P. Mohanty, E. Kougianos, K. Karunakaran, and M. Ganapathiraju, “Smart-Pillow: An IoT based Device for Stress Detection Considering Sleeping Habits”, in Proceedings of the 4th IEEE International Symposium on Smart Electronic Systems (iSES), 2018, pp. 161--166.
+
+
+[Kaggle Dataset - Apple Health Sleep Stages and Heart Rate ]("https://www.kaggle.com/datasets/aeryss/apple-health-sleep-stages-and-heart-rate")
+
+Another dataset containing sleep tracking metrics submitted from Apple Watch owners.  The files appear to be split by user and by categories of sleep metric (heart_rate, lables, motion, steps).  We can also investigate this data to find trends in sleeping that we could present to Srsen as a potential high-impact demographic for some of Bellabeat's devices that also track sleep metrics.
+
+Metrics Include:
+
+* Heart Rate
+* Motion
+* Steps
+
+
+[Kaggle Dataset - Health App Data]("https://www.kaggle.com/datasets/dannyperez014/health-app-data-2017-2024")
+
+Apple's health app data, this dataset has a number of aspects associated with health metrics tracked through apples health applications.  
+
+Metrics Include:
+* Energy Burned
+* Walking Steadiness
+* Basal Energy
+* Cals
+* Dist Walking & Running
+* Stairs Climbed
+* Headphone Audio
+* Sleep Analysis
+* Step_counts
+* Walking Asymmetry
+* Walking Double Support
+* Walking Speeds
+* Walking Step Lengths
+
+Reliable data sources of health data from Garner Products, Samsung, or Amazfit were not readily available, so this analysis is based on the provided *fitbit* data from Urska Srsen, data from a 'smart pillow' product case called 'SaYo Pillow' and *Sleep Metric Data* collected from a few smart devices
+
+```{r echo=FALSE, warning=FALSE}
+#https://stackoverflow.com/questions/37221184/r-function-unzip-error-1-in-extracting-from-zip-file
+
+knitr::opts_knit$set(root.dir = rprojroot::find_rstudio_root_file())
+
+library(tidyverse)
+library(ggplot2)
+library(tinytex)
+library(plyr)
+library(stringr)
+library(tinytex)
+library(httr)
+library(downloader)
+library(stringr)
+library(tidyr)
+library(dplyr)
+library(tibble)
+library(performance)
+library(lubridate)
+library(gridExtra)
+
+
+#Define URL's of datasets to be downloaded
+#Fitbit data
+fitbit_url <- "https://www.kaggle.com/api/v1/datasets/download/arashnic/fitbit"
+
+# Apple Health Sleep Stages
+apple_health_url <- "https://www.kaggle.com/api/v1/datasets/download/aeryss/apple-health-sleep-stages-and-heart-rate"
+
+# YoSa Pillow Sleep Study Data
+yosa_pillow_sleep_url <- "https://www.kaggle.com/api/v1/datasets/download/laavanya/human-stress-detection-in-and-through-sleep"
+
+health_app_data_url <- "https://www.kaggle.com/api/v1/datasets/download/dannyperez014/health-app-data-2017-2024"
+
+url_df <- c(fitbit_url, apple_health_url, yosa_pillow_sleep_url, health_app_data_url)
+
+
+#url_df <- c(health_app_data_url)
+
+dataset_dir <- paste(getwd(),sep="","/datasets/kaggle_downloads")
+
+# Download large file
+## pass credentials into 'extra' argument if using auth based CURL endpoint
+for (i in 1:length(url_df)) {
+  #Inject the file name into the temp folder
+  tmp <- tempfile()
+  str_df_temp <- strsplit(url_df[[i]], "/")
+  proj_name <- str_df_temp[[1]][length(str_df_temp[[1]])]
+  dir_temp <- paste(dataset_dir, proj_name, sep = "/")
+
+  #Download into appropriately named folders (kaggle project name)
+  download.file(url_df[i], tmp, method="curl", cacheOK=FALSE, extra = "-L")
+  unzip(tmp,exdir=dir_temp)
+}
+ 
+## Create a temp file list to parse through
+file_list_tmp <-  list.files(path = dataset_dir, pattern="*.csv$", recursive=TRUE, full.names=TRUE)
+filedf_tmp <- paste(sub(".*kaggle_downloads/([^/]+)/.*", "\\1", file_list_tmp),'-',sub(".*/([^/]+)\\.csv$", "\\1", file_list_tmp))
+#projdf_tmp <- sub(".*kaggle_downloads/([^/]+)/.*", "\\1", file_list_tmp)
+
+## Dataframe for listing CSV file contents
+project_data_list <- list()
+project_data_list <- lapply(file_list_tmp, read.csv)
+
+## Need to rename columns according to project name
+## last parts of the file paths
+
+names(project_data_list) <- filedf_tmp
+
+# Here is our file list:
+#summary(filedf)
+
+# And here is our list composed of dataframes based on the contents of these files:
+#summary(project_data_list[1][1])
+#colSums(is.na(project_data_list[[1]][1]))
+
+#And there you have it!  Now the data is all imported into an R notebook and set up as a list of data frames named correspondingly with their kaggle project names. 
+
+# Now we will check for missing values to understands which pieces of our dataset are valid
+# Since we're in a list, we'll need to use lapply, so we'll create a function first for colSums and is.na
+
+check.data <- function(x) {
+  Filter(function(x) x > 0, colSums(is.na(x)))
+}
+
+# get the results of the function to see nulls in each dataset
+validation_df <- lapply(project_data_list, check.data)
+
+
+# Print results 
+#print(validation_df)
+
+
+```
+
+
+#### **Reason for using R**
+I used R for every step of this project because I am already fairly well versed with Alteryx, Tableau and SQL from prior work experience.
+
+
+### Preparation of the data
+
+The data has been input into this Rstudio workbook and is ready to be investigated further to assisst Srsen with her theory and analysis.
+
+Key tasks
+1. Download data and store it appropriately.
+* Data is downloaded from the kaggle website utilizing CURL and data.download packages in R.  Directories created under the 'datasets' folder in this R repository to store and organize these data in the structure made available through the CURL endpoint.
+
+2. Identify how it’s organized.
+* File name indicates the contents of the files for a lot of these. Each dataset was stored based on the individual file names and the Kaggle project they belonged to.
+* The Fit bit dataset specifically has two directories, each representing one months worth of user activity data.  Can be derived from the data so perhaps there's a way to rename those dataframes in the list accordingly.
+
+3. Sort and filter the data.
+* The data has been sorted into individual data frames in R.  The files have also been downloaded and appropriately sorted by kaggle project in the same R repository.
+
+There is some Null information in these data sets. *Health app data 2017-2024* has NA values in source_version and Unit columns, app walking steadiness has a few NA entry_values as well to look out for.  Our fitbit data has some nulls as well, in our weight log data.
+
+4. Determine the credibility of the data.
+   A.  the 2017 - 2024 health data has a lot of volume worth of data, but the author does call this out.  I will investigate outliers.
+   B.  The Soya pillow study data is a little limited content wise, but the data is very well populated so it will be a good set to drive insights from.
+   c.  Apple health watch data is great for sleep and heart rate tracking.  However, because it is only based on one person's data, I'm going to exclude it from our analysis.  It is not an appropriate representation of sample of bellabeat's consumer population.
+   D.  Fitbit data seems to be well populated and credible.  There are only 2 months worth of data, however.  
+   E.  Seems a lot of sleep activity data is available through these various data sets so I will consider that as a key criteria to investigate moving forward.
+   F.  Also worth noting, that for the purpose of the course and the project timelines, I limited my data resourcing to just Kaggle.  I'm certain there is pertinent information available in the BigQuery public datasets.  
+
+
+### Preparing the Data for Analysis
+
+With all the data we have, I believe cherry picking the ones that seem most relevant to activity that would be conducted by Bellabeat product users is best.  At this point I would have spoken with Srsen and provided her with the list of additional data sets I found at her request, then,  Based on her feedback I would prioritize analysis of the data sets that seemed most appealing to her subject matter expertise, as to not waste time.  However, given that I don't have that capability, I used my best judgment.  
+
+Initially, we eliminate the 'Apple Health' data set due to inefficient population sampling. 
+
+Looking at FitBit data, we're going to start with our daily activity files from both months to get a good idea of what fitbit activity data looks like in general.  This may open the door for additional anlysis in other activity-type trends and correlation.  From there, we'll include hourly calories, intensities, and sleep data as well to support the health app-data theories we want to look into (described below).  We will also bring in weight log, as losing weight (or fat, rather) is a largely appealing result of tracking your fitness activities.  With BMI we should be able to see what individuals with high activity and good sleep patterns can achieve.
+
+Our 'health-app-data' dataset contains some data that may be useful while looking at the fitbit dataset.  We are going to take active energy burned and headphone audio to see if there's any correlation with music and intensity of activity.  We will also take a look at the sleep analysis data available to support another theory about stress and sleep in the marketing demographic, and utilize this in conjunction with sleep data from our fitbit dataset and SoYa stress/sleep analysis dataset.
+
+Lastly, we're going to take a look at the SoYa smart pillow sleep analysis dataset.  There are translations for the acronyms within the dataset available, so we're going to update the data frame accordingly.
+
+
+
+
+```{r echo=FALSE, warning=FALSE}
+# Looking at our list of data frames we can see we want the following data frames:
+# 
+# Looking to gain insight on:
+# Activity Trends and Calorie burn:
+# [3][14] FitBit - Activity summary
+# [6][20] FitBit - Hourly Intensities
+# [5][19] FitBit - Hourly Calories
+# [4][18] FitBit - Hourly Heart Rate
+# [13][42] FitBit - WeightLogs
+# 
+# 
+# Music and More Calorie Burn:
+# [38] Health App Data - Audio Logs
+# [34] Health App Data - basal energy burned
+# * After investigation, I think we will want just 32 and 38, as 32 appears to be a more granular breakout of activity that we can align better with the audio listening data
+# [32] Health App Data - Active Energy Burned
+# 
+# Sleep Habits:
+# [11][27] - Fitbit - Sleep
+# [39] - Health App Data - Sleep
+# * This data specifically had some NA values appear in our validation analysis earlier, will make sure to clean the data accordingly and re-assess.
+# [38] - App Health Data - Sleep
+# 
+# *For Reference*
+# [3],[4],[5],[6],[11],[14],[18],[19],[20],[27],[32],[35],[38],[39]
+
+# Had Data Prep for Analysis
+
+had_active_energy_burned <- project_data_list[[32]][4:7]
+had_active_energy_burned$start_datetime <- mdy_hm(had_active_energy_burned$start_datetime)
+had_active_energy_burned$weekday <- weekdays(had_active_energy_burned$start_datetime)
+
+had_basal_energy_burned <- project_data_list[[34]][4:7]
+had_basal_energy_burned$start_datetime <- mdy_hm(had_basal_energy_burned$start_datetime)
+had_basal_energy_burned$weekday <- weekdays(had_basal_energy_burned$start_datetime)
+
+#have to manually pull listening time by calculating the difference between start and end time for each row
+had_audio <- project_data_list[[38]][c(2,4,5,6,7)]
+had_audio$start_datetime <- mdy_hm(had_audio$start_datetime)
+had_audio$end_datetime <- mdy_hm(had_audio$end_datetime)
+had_audio$listening_time_sec <- difftime(had_audio$end_datetime,had_audio$start_datetime)
+had_audio <- had_audio[c(2,3,4,5,6)]
+had_audio$weekday <- weekdays(had_audio$start_datetime)
+#print(had_audio[order(had_audio$listening_time_seconds),])
+#Looking at the data we see there are some full day listening durations, which is probably device or user error
+#We're going to assume that 0's and anything greater than 30 is either a notification, or user error, respectively.
+had_audio$listening_time_sec[had_audio$listening_time_sec == 0] <- 1
+had_audio$listening_time_sec <- as.integer(had_audio$listening_time_sec)
+
+
+# Breakout daily and hourly active calorie burn sums for analysis
+# Daily
+had_active_energy_burned_daily <- had_active_energy_burned
+had_active_energy_burned_daily$start_datetime <- floor_date(had_active_energy_burned_daily$start_datetime, unit=c("day"))
+had_active_energy_burned_daily <- had_active_energy_burned_daily %>%
+  group_by(start_datetime,weekday,record_type,unit) %>%
+  dplyr::summarize(
+    daily_total_active_calories = sum(as.integer(value))
+  )    
+# Hourly   
+had_active_energy_burned_hourly <- had_active_energy_burned
+had_active_energy_burned_hourly$start_datetime <- floor_date(had_active_energy_burned_hourly$start_datetime, unit=c("hour"))
+had_active_energy_burned_hourly <- had_active_energy_burned_hourly %>%
+  group_by(start_datetime,weekday,record_type,unit) %>%
+  dplyr::summarize(
+    hourly_total_active_calories = sum(as.integer(value))
+  )   
+
+# Breakout daily and hourly basal calorie burn sums for analysis
+# Daily
+had_basal_energy_burned_daily <- had_basal_energy_burned
+had_basal_energy_burned_daily$start_datetime <- floor_date(had_basal_energy_burned_daily$start_datetime, unit=c("day"))
+had_basal_energy_burned_daily <- had_basal_energy_burned_daily %>%
+  group_by(start_datetime,weekday,record_type,unit) %>%
+  dplyr::summarize(
+    daily_total_basal_calories = sum(as.integer(value))
+  )    
+# Hourly   
+had_basal_energy_burned_hourly <- had_basal_energy_burned
+had_basal_energy_burned_hourly$start_datetime <- floor_date(had_basal_energy_burned_hourly$start_datetime, unit=c("hour"))
+had_basal_energy_burned_hourly <- had_basal_energy_burned_hourly %>%
+  group_by(start_datetime,weekday,record_type,unit) %>%
+  dplyr::summarize(
+    hourly_total_basal_calories = sum(as.integer(value))
+  ) 
+
+# Breakout daily and hourly audio listening activity sums for analysis
+# Daily
+had_audio_daily <- had_audio
+had_audio_daily$start_datetime <- floor_date(had_audio_daily$start_datetime, unit=c("day"))
+had_audio_daily <- had_audio_daily %>%
+  group_by(start_datetime,weekday,record_type,unit) %>%
+  dplyr::summarize(
+    average_daily_volume = mean(as.integer(value)),
+    daily_listening_duration_mins = (sum(as.integer(listening_time_sec)) / 60)
+  )    
+# Hourly   
+had_audio_hourly <- had_audio
+had_audio_hourly$start_datetime <- floor_date(had_audio_hourly$start_datetime, unit=c("hour"))
+had_audio_hourly <- had_audio_hourly %>%
+  group_by(start_datetime,weekday,record_type,unit) %>%
+  dplyr::summarize(
+    average_hourly_volume = mean(as.integer(value)),
+    hourly_listening_duration_mins = (sum(as.integer(listening_time_sec)) / 60)
+  ) 
+
+#now remove the baseline objects
+rm(had_active_energy_burned)
+rm(had_basal_energy_burned)
+rm(had_audio)
+
+
+
+
+
+
+## SaYo Sleep Data
+sayo_sleep_data <- project_data_list[[45]]
+colnames(sayo_sleep_data) <- c('snoring_range', 'respiration_rate', 'body_temp', 'limb_movement_rate',
+                                 'blood_oxygen_levels', 'eye_movement', 'sleep_hours', 'heart_rate', 'stress_levels')
+
+
+
+
+
+
+
+
+## Fitbit
+#summary
+fitbit_summary <- rbind(project_data_list[[3]][c(1:2,11:15)], project_data_list[[14]][c(1:2,11:15)])
+fitbit_summary$total_active_minutes <- fitbit_summary$VeryActiveMinutes + fitbit_summary$FairlyActiveMinutes + fitbit_summary$LightlyActiveMinutes
+fitbit_summary$ActivityDate <- mdy(fitbit_summary$ActivityDate)
+
+# Weight
+fitbit_weight_daily <- rbind(project_data_list[[13]][c(1:7)], project_data_list[[31]][c(1:7)])
+# lets get the min and Weights for each ID in the dataset
+# will have to find the initial reported weight and last reported weight as min max could give us false changes depending on when the weights were reported
+fitbit_weight_first_last <- fitbit_weight_daily %>% group_by(Id) %>%
+  dplyr::summarize(max_date = max(Date), min_date = min(Date))
+fitbit_weight_first <- inner_join(fitbit_weight_first_last, fitbit_weight_daily, by=c("Id"="Id", "min_date"="Date"))
+fitbit_weight_last <- inner_join(fitbit_weight_first_last, fitbit_weight_daily, by=c("Id"="Id", "max_date"="Date"))
+fitbit_weight_first <- select(fitbit_weight_first,1,5)
+fitbit_weight_last <- select(fitbit_weight_last,1,5)
+colnames(fitbit_weight_first)[2] <- "init_weight"
+colnames(fitbit_weight_last)[2] <-  "last_weight"
+fitbit_weight_first_last <- inner_join(fitbit_weight_first, fitbit_weight_last, by=c("Id"="Id"))
+fitbit_weight_daily <- left_join(fitbit_weight_daily, fitbit_weight_first_last, by=c("Id"="Id"))
+fitbit_weight_daily$weight_lost_lbs <- fitbit_weight_daily$init_weight - fitbit_weight_daily$last_weight
+
+rm(fitbit_weight_first)
+rm(fitbit_weight_last)
+rm(fitbit_weight_first_last)
+
+# sleep
+fitbit_sleep_daily <- rbind(project_data_list[[11]][c(1:3)], project_data_list[[27]][c(1:3)])
+fitbit_sleep_daily$date <- mdy_hms(fitbit_sleep_daily$date)
+fitbit_sleep_daily$date <- floor_date(fitbit_sleep_daily$date, unit=c("day"))
+fitbit_sleep_daily <- fitbit_sleep_daily %>%
+  group_by(Id,date) %>%
+  dplyr::summarize(
+    daily_sleep_hours = sum(as.integer(value)) / 60
+  ) 
+
+```
+
+### Analyze and Share - Charting and Sharing Conclusions
+
+#### Health App Data Analysis:
+
+```{r echo=FALSE, warning=FALSE}
+# Had
+
+#Joining our 3 daily summary tables
+had_daily_summary <- inner_join(had_active_energy_burned_daily, had_basal_energy_burned_daily, by=c("start_datetime"="start_datetime", "weekday"="weekday"))
+had_daily_summary <- inner_join(had_daily_summary, had_audio_daily, by=c("start_datetime"="start_datetime", "weekday"="weekday"))
+
+## joinging hourly summary to investigate correlation with listening and activity
+had_hourly_activity_audio <- left_join(had_active_energy_burned_hourly, had_audio_hourly, by=c("start_datetime"="start_datetime", "weekday"="weekday"))
+
+## didn't seem to have an impact on total calories burn (when including basal)
+ggplot(data=had_daily_summary, aes(x=daily_listening_duration_mins, y=(daily_total_basal_calories + daily_total_active_calories))) + geom_point() + 
+  labs(
+    title = "Daily Listening Duration vs. Daily Total Calories Burned",
+    x = "Daily Listening Duration",
+    y = "Daily Calories Burned",
+  ) + stat_ellipse()
+## As we can see there is a bit of a correlation with number of listening minutes and activity that burns calories
+## It does drop off with the more minutes listened, but this could be because groups aren't excersizing for more than 50 minutes.  We will set 50 minutes as our limit assuming groups are not doing physical activity for almost 2 hours straight.
+ggplot(data=had_daily_summary, aes(x=daily_listening_duration_mins, y=daily_total_active_calories)) + geom_point() + xlim(0, 50) + ylim(0, 200) + geom_smooth(method = lm, formula = y ~ splines::bs(x, 3), se = FALSE)  +
+  labs(
+    title = "Hourly Listening Duration vs. Hourly Highly Active Calories Burned",
+    x = "Hourly Listening Duration",
+    y = "Hourly Calories Burned",
+  )
+## hourly summary to investigate correlation with listening and activity
+
+## We want to investigate how often (and when) physical and audio activity occurred, and we want to investigate if calorie burn was higher during combined activity periods vs. not combined
+
+had_hourly_activity_audio <- left_join(had_active_energy_burned_hourly, had_audio_hourly, by=c("start_datetime"="start_datetime", "weekday"="weekday"))
+had_hourly_activity_audio[] <- lapply(had_hourly_activity_audio, function(x) {
+  if (is.character(x)) {
+    x[is.na(x)] <- ""
+  } else if (is.numeric(x)) {
+    x[is.na(x)] <- 0
+  }
+  return(x)
+})
+had_hourly_activity_audio$hour <- hms::as_hms(had_hourly_activity_audio$start_datetime)
+had_hourly_activity_audio$is_listening <- ifelse(had_hourly_activity_audio$hourly_listening_duration_mins > 0, 1, 0)
+had_hourly_activity_audio$is_doing_activity <- ifelse(had_hourly_activity_audio$hourly_total_active_calories > 0, 1, 0)
+#summary(had_hourly_activity_audio)
+# Looking at the data, a lot of the active calorie burn is less than 10.  According to MedicalNewsToday, https://www.medicalnewstoday.com/articles/323922#:~:text=Generally%20speaking%2C%20a%20light%20weightlifting,can%20burn%20around%20185%20calories., a light workout (cardio or weightlifting) is typically 110-185 calories burned depending on activity.  Since this data seems to be averaging a number of different persons calories burned, as even the 3rd quantile value for active calories per hour is 5.383
+# we will filter out values below 30 calories an hour, assuming there was some degree of physical excersize occuring for thoose averages
+#summary(had_hourly_activity_audio)
+# Aggregate data
+
+had_hourly_chart_df <- had_hourly_activity_audio %>%
+  group_by(hour) %>%
+  dplyr::summarize(
+    activity_sessions = sum(as.integer(is_doing_activity)),
+    listening_sessions = sum(as.integer(is_listening))
+  )
+# Heatmap for calories burned
+ggplot(had_hourly_chart_df, aes(x = hour, y = activity_sessions, fill = listening_sessions)) +
+  geom_bar(stat="identity", position='stack') + 
+  labs(
+    title = "Frequency of Activity correlation with Frequency of Audio Listening",
+    x = "Hour of the Day",
+    y = "Frequency of Activity",
+    fill = "Frequency of Listening"
+  ) 
+#looks like there is a correlation of music listening and working out around 8PM (after work).  There is also a high degree of activity and listening around 9:30, indicating that the two most frequent workout hours according to https://www.future.co/blog/the-most-popular-workout-times-according-to-future-member-data--T8IWv05y4 are correlated with a high amount of audio activity as well!
+
+had_audio_calorie_impact <- filter(had_hourly_activity_audio, is_doing_activity==1)
+
+had_audio_calorie_impact_no_audio <- filter(had_audio_calorie_impact, is_listening==0) %>%
+  group_by(hour) %>%
+  dplyr::summarize(
+    avg_calorie_burn_no_audio = mean(as.integer(hourly_total_active_calories))
+  )
+
+had_audio_calorie_impact_has_audio <- filter(had_audio_calorie_impact, is_listening==1) %>%
+  group_by(hour) %>%
+  dplyr::summarize(
+    avg_calorie_burn_with_audio = mean(as.integer(hourly_total_active_calories))
+)
+
+had_audio_calorie_comparison <- left_join(had_audio_calorie_impact_no_audio, had_audio_calorie_impact_has_audio, by=c("hour"="hour"))
+
+had_combined_audio_activity_plot <- list(
+audio = ggplot(had_audio_calorie_comparison, aes(x = hour, y = avg_calorie_burn_with_audio)) +
+  geom_line() + ylim(0,13) + 
+  labs(
+    title = "Average Calorie Burn During Activity With Audio",
+    x = "Hour of the Day",
+    y = "Average Calorie Burn"
+  ),
+no_audio = ggplot(had_audio_calorie_comparison, aes(x = hour, y = avg_calorie_burn_no_audio)) +
+  geom_line() + ylim(0,13) + 
+  labs(
+    title = "Average Calorie Burn During Activity Without Audio",
+    x = "Hour of the Day",
+    y = "Average Calorie Burn"
+  )
+)
+
+grid.arrange(grobs = had_combined_audio_activity_plot, ncol = 1)
+```
+
+#### Health App Data Conclusions:
+* Total calories burned (basal + active) around 1700 for those who listened to audio through their devices for 20-70 minutes a day.
+* Calories burned while listening to audio during periods of activity show a positive correlation with one another, indicating that listening to music while doing activities can help calorie burn.
+* Peak activity hours (8-10 AM & 6-9 PM) showed differing audio activity.  PM activity sessions seems to have a higher frequency of audio activity following the work out, where as morning activity sessions have more frequency of listening during the workouts.
+*  Hourly Calorie burn (on average) was higher with individuals who were listening to music during the same time frame than those who were not.  I acknowledge the calorie burn numbers are small, but I don't have enough info about the sample data to make educated guesses on how to best isolate workdays without making assumptions.
+
+#### Smart Yoga Pillow Case-Study Analysis:
+
+```{r echo=FALSE, warning=FALSE}
+## Soya Analysis
+
+
+#We're going to try a box plots to compare stress levels with each of the metrics
+#Since we want to display multiple correlations together, we're going to leverage a plot grid package called 'gridExtra'
+sleep_metrics <- c('snoring_range', 'respiration_rate', 'body_temp', 'limb_movement_rate',
+                   'blood_oxygen_levels', 'eye_movement', 'sleep_hours', 'heart_rate')
+# Create a list of boxplots
+boxplots <- lapply(sleep_metrics, function(metric) {
+  ggplot(sayo_sleep_data, aes(x = factor(stress_levels), y = .data[[metric]])) +
+    geom_boxplot() +
+    labs(title = paste("Stress Levels vs", metric),
+         x = "Stress Levels",
+         y = metric) +
+    theme_minimal()
+})
+# Arrange the plots in a grid
+grid.arrange(grobs = boxplots, ncol = 2)
+#as we can see - there is quite the correlation with all of these sleeps habits and degrees of stress in an individual.  We can make the reccomendation that we can leverage Bellabeats application and smart devices to better track sleep patterns and help get control over them with medical providers.
+```
+
+#### Smart Yoga Pillow Case-Study Conclusions:
+
+* All of the poor sleeping activity & habits (i.e. snoring, moving, sleeping in the cold) are correlated with higher stress ratings.
+
+#### FitBit Dataset Analysis:
+
+```{r echo=FALSE, warning=FALSE}
+
+
+
+## FitBit
+
+
+# * if more activity is correlated with more sleep
+fitbit_activity_sleep_corr <- inner_join(fitbit_summary, fitbit_sleep_daily, by=c("ActivityDate"="date", "Id"="Id"))
+#this eliminated a lot of entries, so let's see what our population size looks like by Id first
+#unique(fitbit_activity_sleep_corr$Id)
+#looks like a group of 25 individuals, nice.  I would always prefer more comprehensive data and will call this out, but it's a solid sample.
+#summary(fitbit_activity_sleep_corr)
+# looking at the summary we see there are varying degrees of activty minutes, I think we compare sleep with the amount of sedentary minutes and combination of al all of the 'active' minutes fields to get the best comparison
+
+# now let's create a data plot data set to work with
+fitbit_activity_sleep_plot <- fitbit_activity_sleep_corr %>% group_by(Id) %>%
+  dplyr::summarize(average_sleep_hours = mean(daily_sleep_hours), average_activity_hours = mean(total_active_minutes/60))
+
+#fitbit_activity_sleep_plot <- fitbit_activity_sleep_plot %>%
+  #mutate(row_count = row_number())
+# Scatter plot with trend line
+ggplot(fitbit_activity_sleep_plot, aes(y=average_sleep_hours, x=average_activity_hours)) +
+  geom_point(size=15, shape=15) + stat_ellipse() +
+  labs(
+    title = "Average Sleep Hours vs. Average Activity Hours",
+    x = "Avg. Activity Hours",
+    y = "Avg. Sleep Hours"
+  )
+
+
+# as we can see in the circled area - 4-5hours of activity correlated with around 7 hours of sleep
+
+
+# let's plot the same way we did last time
+fitbit_avg_activity_time <- fitbit_summary %>% group_by(Id) %>%
+  dplyr::summarize(avg_active_minutes = mean(total_active_minutes))
+# now isolate id's and weight loss metric
+fitbit_activity_weight_corr <- fitbit_weight_daily %>% group_by(Id) %>%
+  dplyr::summarize(weight_lost_lbs = median(weight_lost_lbs))
+# sample size is a little smaller, but given the data we have it's the most accurate sample
+fitbit_activity_weight_corr <- inner_join(fitbit_avg_activity_time, fitbit_activity_weight_corr, by=c("Id"="Id"))
+
+
+
+#hmm - seems one ID in this data is very much an outlier.  The dataset on kaggle mentions self reports being an issue, so we will filter out the person with the ID 1927972279 to get a more accurate trend.
+fitbit_activity_weight_corr <- filter(fitbit_activity_weight_corr, Id != 	1927972279)
+#same plot as before
+# Scatter plot with trend line
+ggplot(fitbit_activity_weight_corr, aes(weight_lost_lbs, x=avg_active_minutes)) +
+  geom_point(size=15, shape=15) + geom_smooth(method=lm, se=FALSE) + xlim(225, 400) + ylim(0,3) + labs(
+    title = "Average Activity Minutes vs. Weight Loss",
+    x = "Avg. Activity Mins",
+    y = "Reported Weight Loss (lbs)"
+  )
+#As expected clearly there is a correlation with a combination of all kinds of activity and weight loss
+# now using a little of both the prior steps, let's analyze weight loss with sleep stats to see if there's a correlation with sleep and weight loss
+#We'll re-use fitbit_weight_first_last
+#summary(fitbit_weight_first_last)
+fitbit_average_daily_sleep <- fitbit_sleep_daily %>% group_by(Id) %>%
+  dplyr::summarize(avg_daily_sleep = mean(daily_sleep_hours))
+fitbit_sleep_weight_corr <- inner_join(fitbit_weight_daily, fitbit_average_daily_sleep, by=c("Id"="Id"))
+#same plot as before
+# Scatter plot with trend line
+ggplot(fitbit_sleep_weight_corr, aes(y=init_weight - last_weight, x=avg_daily_sleep)) +
+  geom_point(size=5, shape=15) + geom_smooth(method=lm, se=FALSE) + xlim(5, 10) + ylim(0,6) +
+  labs(
+    title = "Avg. Sleep Hours vs. Weight Loss",
+    x = "Avg. Sleep Hours",
+    y = "Reported Weight Loss (lbs)"
+  )
+#No correlation with weightloss here.  This dataset was very small though, so we can bring up that we looked into this correlation, but the data wasn't robust eno
+
+```
+
+#### FitBit Dataset Conclusions:
+
+* Much of the population from this data have a range of activity hours and sleep hours that would suggest a correlation between the both.  3.5 - 5 hours of activity suggest 6-7 hours of sleep a night.
+
+* As for sleep and activity correlations with weight loss, we can see there is a small positive correlation with weight loss and activity minutes, but a negative correlation with weight loss and anything more than 7 hours of sleep.  The amount of valid data for these two observations was quite small.
+
+### Act - Conclusion and Suggestions:
+
+Based on our findings, there a few things Bellabeat could implement into their marketing strategy to better target the customers of it's products based on habits and correlations of other smart device user metrics.
+
+#### Music / Podcast / Other Listening Activity and Exercise
+
+* according to our health app data findings, there is a correlation with listening and activity during morning workouts and post night work outs.  We could target the crowds that do both through adds on pandora or spotify specifically within those timeframes.
+
+* there was also a positive correlation with average calorie burn while listening to music during activity.  If this is the case, we could appeal to users more by adding music features to our smart device applications and presenting them with the findings that music burns an extra 3-5 calories on average while exercising.
+
+#### Smart Device Sleep Habit Tracking and Stress Management
+
+* Since we've observed a positive correlation with every bad sleep habit and increased stress from the Smart Yoga Pillow harvard study, I suggest we lean into Bellabeat's sleep tracking capabilities while marketing to users.  Displaying how these habits can lead to stress, and how Bellabeat products can help customers stay on top of could be appealing to demographics who are actively treating sleep habits or are stressed out and need better help managing their stress.
+
+* We also identified the sweet spot of 3.5 - 5 hours of activity and 6-7 hours of sleep a night.  Since this is an ideal range of both categories, we could come up with a marketing campaign called 'The 4-7', or something of that nature, to really highlight this balance.  And then show how bellabeat products can help users stay on top of this.
