@@ -7,14 +7,27 @@ html_document: default
 pdf_document: default
 ---
 
+```{r init, echo=FALSE, warning=FALSE}
+#https://stackoverflow.com/questions/37221184/r-function-unzip-error-1-in-extracting-from-zip-file
+
+knitr::opts_knit$set(root.dir = rprojroot::find_rstudio_root_file())
+
+logo_images <- paste(getwd(),sep="","/images/bellabeat_logo.png")
+
+```
+
+
 # Bellabeat Case-Study:
+
+![Bellabeat Logo](`r logo_images`)
 
 ## Smart Device Utilization Trends Analysis
 
 ### Business Task (The Ask)
 
-#### Provide analysis of Bellabeat competitor products (like Fitbit, Applewatch, etc.) health data in order to enable the marketing team with more targeted campaign strategies.
+#### Provide analysis of Bellabeat competitor products (like Fitbit, Applewatch, etc.) smart-device health data in order to enable the marketing team with more targeted campaign strategies.
 
+***
 
 ### Processing the Data
 
@@ -22,7 +35,7 @@ pdf_document: default
 
 [Kaggle Dataset - FitBit]("https://www.kaggle.com/datasets/arashnic/fitbit")
 
-Data set suggested by Srsen - contains two separate directories that have data describing FitBit user activity for March through April, and April through May.  There is some consistency to the metrics measured.  We will import this directly from the website into our RStudio workbook 'dataset' directory and process the data for analysis from there.
+Data set suggested by Srsen - contains two separate directories that have data describing FitBit user activity for March through April, and April through May.  We will import this directly from the website into our RStudio workbook 'dataset' directory and process the data for analysis from there.
 
 Metrics include:
 
@@ -37,7 +50,7 @@ Metrics include:
 
 [Kaggle Dataset - Human Stress Detection in and Through Sleep]("https://www.kaggle.com/datasets/laavanya/human-stress-detection-in-and-through-sleep")
 
-A case study for a 'Smart Yoga Pillow' product that focused on identifying a relationship between stress and sleep.  It contains a variety of sleep metrics that we could consider for the stakeholders investigation into trends of smart device usage.  Since Bellabeat's products also have the functionality to track sleep metrics, this could provide information that could be used for those.
+A case study for a 'Smart Yoga Pillow' product that focused on identifying a relationship between stress and sleep.  It contains a variety of sleep metrics that we could consider for the stakeholders investigation into trends of smart device usage.  Since Bellabeat's products also have the functionality to track sleep metrics, this could provide insights on how to best market Bellabeat's products to users with corresponding sleep habits.
 
 Metrics Include:
 
@@ -70,7 +83,7 @@ Metrics Include:
 
 [Kaggle Dataset - Health App Data]("https://www.kaggle.com/datasets/dannyperez014/health-app-data-2017-2024")
 
-Apple's health app data, this dataset has a number of aspects associated with health metrics tracked through apples health applications.  
+Apple's health app data public dataset.  This dataset has a number of aspects associated with health metrics tracked through apples health applications.  
 
 Metrics Include:
 * Energy Burned
@@ -89,7 +102,7 @@ Metrics Include:
 
 Reliable data sources of health data from Garner Products, Samsung, or Amazfit were not readily available, so this analysis is based on the provided *fitbit* data from Urska Srsen, data from a 'smart pillow' product case called 'SaYo Pillow' and *Sleep Metric Data* collected from a few smart devices
 
-```{r echo=FALSE, warning=FALSE}
+```{r Processing, echo=FALSE, warning=FALSE}
 #https://stackoverflow.com/questions/37221184/r-function-unzip-error-1-in-extracting-from-zip-file
 
 knitr::opts_knit$set(root.dir = rprojroot::find_rstudio_root_file())
@@ -186,12 +199,12 @@ validation_df <- lapply(project_data_list, check.data)
 
 
 #### **Reason for using R**
-I used R for every step of this project because I am already fairly well versed with Alteryx, Tableau and SQL from prior work experience.
+I used R for every step of this project because I am already fairly well versed with Tableau and SQL from prior work experience.
 
 
 ### Preparation of the data
 
-The data has been input into this Rstudio workbook and is ready to be investigated further to assisst Srsen with her theory and analysis.
+The data has been input into this Rstudio workbook and is ready to be investigated further to assist Srsen and the Marketting team with their strategy based on smart device utilization.
 
 Key tasks
 1. Download data and store it appropriately.
@@ -204,33 +217,31 @@ Key tasks
 3. Sort and filter the data.
 * The data has been sorted into individual data frames in R.  The files have also been downloaded and appropriately sorted by kaggle project in the same R repository.
 
-There is some Null information in these data sets. *Health app data 2017-2024* has NA values in source_version and Unit columns, app walking steadiness has a few NA entry_values as well to look out for.  Our fitbit data has some nulls as well, in our weight log data.
+There is some Null information in these data sets. *Health app data 2017-2024* has NA values in source_version and Unit columns, app walking steadiness has a few NA entry_values as well to look out for. Our fitbit data has some nulls as well, in our weight log data.
 
 4. Determine the credibility of the data.
    A.  the 2017 - 2024 health data has a lot of volume worth of data, but the author does call this out.  I will investigate outliers.
-   B.  The Soya pillow study data is a little limited content wise, but the data is very well populated so it will be a good set to drive insights from.
-   c.  Apple health watch data is great for sleep and heart rate tracking.  However, because it is only based on one person's data, I'm going to exclude it from our analysis.  It is not an appropriate representation of sample of bellabeat's consumer population.
+   B.  The SaYo pillow study data is a little limited content wise, but the data is very well populated so it will be a good set to drive insights from.
+   c.  Apple health watch data is great for sleep and heart rate tracking.  However, because it is only based on one person's data, I'm going to exclude it from our analysis.  It is not an appropriate representation of sample of Bellabeat's consumer population.
    D.  Fitbit data seems to be well populated and credible.  There are only 2 months worth of data, however.  
    E.  Seems a lot of sleep activity data is available through these various data sets so I will consider that as a key criteria to investigate moving forward.
-   F.  Also worth noting, that for the purpose of the course and the project timelines, I limited my data resourcing to just Kaggle.  I'm certain there is pertinent information available in the BigQuery public datasets.  
+   F.  Also worth noting, that for the purpose of the course and the project timelines, I limited my data resourcing to just Kaggle.  I'm certain there is pertinent information available in the BigQuery public datasets and other big data hosting company's public repositories. 
 
 
 ### Preparing the Data for Analysis
 
-With all the data we have, I believe cherry picking the ones that seem most relevant to activity that would be conducted by Bellabeat product users is best.  At this point I would have spoken with Srsen and provided her with the list of additional data sets I found at her request, then,  Based on her feedback I would prioritize analysis of the data sets that seemed most appealing to her subject matter expertise, as to not waste time.  However, given that I don't have that capability, I used my best judgment.  
+With all the data we have, I believe cherry picking the ones that seem most relevant to activity that would be conducted by Bellabeat product users is best.  At this point I would have spoken with Srsen and provided her with the list of additional data sets I found at her request. Based on her feedback I would prioritize analysis of the data sets that seemed most appealing to her subject matter expertise, as to not waste time.  However, given that I don't have that capability, I used my best judgment.  
 
 Initially, we eliminate the 'Apple Health' data set due to inefficient population sampling. 
 
-Looking at FitBit data, we're going to start with our daily activity files from both months to get a good idea of what fitbit activity data looks like in general.  This may open the door for additional anlysis in other activity-type trends and correlation.  From there, we'll include hourly calories, intensities, and sleep data as well to support the health app-data theories we want to look into (described below).  We will also bring in weight log, as losing weight (or fat, rather) is a largely appealing result of tracking your fitness activities.  With BMI we should be able to see what individuals with high activity and good sleep patterns can achieve.
+Looking at FitBit data, we're going to start with our daily activity files from both months to get a good idea of what fitbit activity data looks like in general.  This may open the door for additional analysis in other activity-type trends and correlation.  From there, we'll include hourly calories, intensities, and sleep data as well to support the health app-data theories we want to look into (described below).  We will also bring in weight log, as losing weight is a largely appealing result of tracking your fitness activities.  
 
-Our 'health-app-data' dataset contains some data that may be useful while looking at the fitbit dataset.  We are going to take active energy burned and headphone audio to see if there's any correlation with music and intensity of activity.  We will also take a look at the sleep analysis data available to support another theory about stress and sleep in the marketing demographic, and utilize this in conjunction with sleep data from our fitbit dataset and SoYa stress/sleep analysis dataset.
+Our 'health-app-data' dataset contains some data that may be useful win conjunction with our Fitbit data.  We are going to take active energy burned and headphone audio to see if there's any correlation with music and intensity of activity.  We will also take a look at the sleep analysis data available to support another theory about stress and sleep in the marketing demographic based on our SaYo findings.
 
-Lastly, we're going to take a look at the SoYa smart pillow sleep analysis dataset.  There are translations for the acronyms within the dataset available, so we're going to update the data frame accordingly.
-
-
+Lastly, we're going to take a look at the SaYo smart pillow sleep analysis dataset.  There are translations for the acronyms within the dataset available, so we're going to update the data frame accordingly.
 
 
-```{r echo=FALSE, warning=FALSE}
+```{r Preparation, echo=FALSE, warning=FALSE}
 # Looking at our list of data frames we can see we want the following data frames:
 # 
 # Looking to gain insight on:
@@ -401,7 +412,7 @@ fitbit_sleep_daily <- fitbit_sleep_daily %>%
 
 #### Health App Data Analysis:
 
-```{r echo=FALSE, warning=FALSE}
+```{r Had_Analysis, echo=FALSE, warning=FALSE}
 # Had
 
 #Joining our 3 daily summary tables
@@ -509,7 +520,7 @@ grid.arrange(grobs = had_combined_audio_activity_plot, ncol = 1)
 
 #### Smart Yoga Pillow Case-Study Analysis:
 
-```{r echo=FALSE, warning=FALSE}
+```{r SaYo_Analysis, echo=FALSE, warning=FALSE}
 ## Soya Analysis
 
 
@@ -537,7 +548,7 @@ grid.arrange(grobs = boxplots, ncol = 2)
 
 #### FitBit Dataset Analysis:
 
-```{r echo=FALSE, warning=FALSE}
+```{r Fitbit_Analysis, echo=FALSE, warning=FALSE}
 
 
 
