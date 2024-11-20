@@ -2,7 +2,7 @@
 title: "Health Device Utilization"
 author: "Nick Costanzo"
 date: "2024-11-13"
-output:
+output: rmarkdown::github_document
 html_document: default
 pdf_document: default
 ---
